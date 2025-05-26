@@ -1,0 +1,11 @@
+# Pasta do Visual Studio
+.vs/
+
+# Pastas de build
+bin/
+obj/
+
+# Outros arquivos desnecessários
+*.user
+*.suo
+*.log

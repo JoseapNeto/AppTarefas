@@ -1,0 +1,224 @@
+﻿<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>CRUD de Tarefas</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .form-select-sm {
+            max-width: 250px;
+        }
+    </style>
+</head>
+<body class="bg-light p-4">
+
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h3 mb-0">Lista de Tarefas</h1>
+            <button class="btn btn-primary" onclick="abrirModal()">
+                <i class="bi bi-plus-lg me-1"></i> Nova Tarefa
+            </button>
+        </div>
+
+        <div class="mb-4 d-flex align-items-end gap-3">
+            <div>
+                <label class="form-label">Filtrar por Status</label>
+                <select id="filtroStatus" class="form-select form-select-sm" onchange="carregarTarefas()">
+                    <option value="">Todos</option>
+                    <option value="0">Pendente</option>
+                    <option value="1">Em Progresso</option>
+                    <option value="2">Concluída</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body p-0">
+                <table class="table table-hover table-striped mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Título</th>
+                            <th>Descrição</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-tarefas">
+                        <!-- tarefas -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="modalTarefa" tabindex="-1">
+        <div class="modal-dialog">
+            <form id="formTarefa" class="modal-content rounded-3 shadow-sm" onsubmit="salvarTarefa(event)">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">Tarefa</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="tarefaId">
+                    <div class="mb-3">
+                        <label class="form-label">Título</label>
+                        <input type="text" class="form-control" id="titulo" required maxlength="100">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descrição</label>
+                        <textarea class="form-control" id="descricao" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3 d-none" id="grupoDataConclusao">
+                        <label class="form-label">Data de Conclusão</label>
+                        <input type="date" class="form-control" id="dataConclusao">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Status</label>
+                        <select id="status" class="form-select">
+                            <option value="0">Pendente</option>
+                            <option value="1">Em Progresso</option>
+                            <option value="2">Concluída</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success">Salvar</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <script>
+        const apiUrl = "https://localhost:7237/api/tarefas";
+
+
+        carregarTarefas();
+
+        async function carregarTarefas() {
+            const filtro = document.getElementById("filtroStatus").value;
+
+            const resp = await fetch(apiUrl);
+            const tarefas = await resp.json();
+
+            const tbody = document.getElementById("tbody-tarefas");
+            tbody.innerHTML = "";
+
+            const tarefasFiltradas = filtro === "" ? tarefas : tarefas.filter(t => t.status == filtro);
+
+            tarefasFiltradas.forEach(t => {
+                tbody.innerHTML += `
+              <tr>
+                <td>${t.titulo}</td>
+                <td>${t.descricao}</td>
+                <td>${obterNomeStatus(t.status)}</td>
+                <td>
+                  <button class="btn btn-sm btn-warning" onclick='editarTarefa(${JSON.stringify(t)})'>Editar</button>
+                  <button class="btn btn-sm btn-danger" onclick="deletarTarefa(${t.id})">Excluir</button>
+                </td>
+              </tr>`;
+            });
+        }
+
+
+        function abrirModal() {
+            document.getElementById("formTarefa").reset();
+            document.getElementById("tarefaId").value = "";
+            document.getElementById("grupoDataConclusao").classList.remove("d-none");
+
+            new bootstrap.Modal(document.getElementById('modalTarefa')).show();
+        }
+
+        function editarTarefa(tarefa) {
+            document.getElementById("tarefaId").value = tarefa.id;
+            document.getElementById("titulo").value = tarefa.titulo;
+            document.getElementById("descricao").value = tarefa.descricao;
+            document.getElementById("status").value = tarefa.status;
+
+            
+            if (tarefa.dataConclusao) {
+                const data = new Date(tarefa.dataConclusao);
+                const formatted = data.toISOString().slice(0, 10);
+                document.getElementById("dataConclusao").value = formatted;
+            } else {
+                document.getElementById("dataConclusao").value = "";
+            }
+
+            document.getElementById("grupoDataConclusao").classList.remove("d-none");
+
+            // Abre o modal
+            const modal = new bootstrap.Modal(document.getElementById("modalTarefa"));
+            modal.show();
+        }
+
+
+        async function salvarTarefa(event) {
+            event.preventDefault();
+
+            const idValue = document.getElementById("tarefaId").value;
+            const id = idValue ? parseInt(idValue) : 0;
+            const dataConclusao = document.getElementById("dataConclusao").value;
+
+            const tarefa = {
+                id: id,
+                titulo: document.getElementById("titulo").value,
+                descricao: document.getElementById("descricao").value,
+                status: parseInt(document.getElementById("status").value),
+                dataConclusao: dataConclusao ? new Date(dataConclusao).toISOString() : null
+            };
+
+            // Se for novo, adicione dataCriacao
+            if (!id) {
+                tarefa.dataCriacao = new Date().toISOString();
+            }
+
+            const url = id ? `${apiUrl}/${id}` : apiUrl;
+            const method = id ? "PUT" : "POST";
+
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(tarefa)
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                alert("Erro ao salvar: " + error);
+                return;
+            }
+
+            bootstrap.Modal.getInstance(document.getElementById('modalTarefa')).hide();
+            carregarTarefas();
+        }
+
+
+        async function deletarTarefa(id) {
+            if (confirm("Deseja excluir esta tarefa?")) {
+                await fetch(`${apiUrl}/${id}`, { method: "DELETE" });
+                carregarTarefas();
+            }
+        }
+
+
+
+        function obterNomeStatus(status) {
+            switch (status) {
+                case 0: return 'Pendente';
+                case 1: return 'Em Progresso';
+                case 2: return 'Concluída';
+                default: return 'Desconhecido';
+            }
+        }
+
+
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+
+</body>
+</html>

@@ -1,0 +1,6 @@
+@AppTarefas.Domain_HostAddress = http://localhost:5145
+
+GET {{AppTarefas.Domain_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
